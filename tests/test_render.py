@@ -1,6 +1,5 @@
-from forumread.model import Comment, Thread, assign_depths
+from forumread.model import Comment, SearchHit, SearchResult, Thread, assign_depths
 from forumread.render import Limits, prepare, render_hits, render_thread
-from forumread.model import SearchHit, SearchResult
 
 
 def c(author, score, body="text", created=0, children=()):

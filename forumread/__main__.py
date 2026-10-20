@@ -44,7 +44,8 @@ def _run_all(items: list[str], work: Callable[[str], Any], workers: int, deadlin
             return Failure(item, str(exc), usage=True)
         except FetchError as exc:
             return Failure(item, str(exc))
-        except Exception as exc:  # one malformed upstream payload must not sink the rest of the batch
+        # one malformed upstream payload must not sink the rest of the batch
+        except Exception as exc:  # noqa: BLE001
             return Failure(item, f"unexpected {type(exc).__name__}: {exc}")
 
     if len(items) == 1 and deadline is None:

@@ -24,7 +24,7 @@ BROWSER_UA = (
 _RESULT = re.compile(
     r'<a[^>]*class="result__a"[^>]*href="(?P<href>[^"]+)"[^>]*>(?P<title>.*?)</a>'
     r'|<a[^>]*class="result__snippet"[^>]*>(?P<snippet>.*?)</a>',
-    re.S,
+    re.DOTALL,
 )
 
 

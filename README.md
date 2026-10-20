@@ -1,5 +1,7 @@
 # forumread
 
+[![CI](https://github.com/tempoloss/forumread/actions/workflows/ci.yml/badge.svg)](https://github.com/tempoloss/forumread/actions/workflows/ci.yml)
+
 **Forum opinion for AI agents.** Search and read Reddit, Hacker News and Stack Exchange threads as compact, token-budgeted markdown. Stdlib-only Python CLI, plus an omp extension that exposes it as two agent tools.
 
 ## Why
@@ -113,7 +115,8 @@ If Reddit changes or revokes the client id, set `FORUMREAD_REDDIT_CLIENT_ID` (an
 ## Development
 
 ```
-pip install -e . pytest
+pip install -e ".[dev]"
+ruff check .
 python -m pytest -q
 ```
 

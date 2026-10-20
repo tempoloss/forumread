@@ -1,9 +1,9 @@
 import itertools
 import json
 import time
-from base64 import b64encode
 import urllib.error
 import urllib.parse
+from base64 import b64encode
 
 import pytest
 

@@ -14,14 +14,14 @@ from forumread.model import Comment, SearchResult, Thread, assign_depths, count_
 SOURCE_LABELS = {"reddit": "Reddit", "hn": "Hacker News", "se": "Stack Exchange"}
 _DELETED_BODIES = {"", "[deleted]", "[removed]"}
 _BOT_AUTHORS = {"automoderator"}  # an explicit set: names merely ending in "bot" are too often real people
-_BOT_FOOTER = re.compile(r"\bI(?: am|'m) a bot\b", re.I)  # "I am a bot, and this action was performed automatically."
-_BOT_WORDING = re.compile(r"\bautomatically\b|\bI(?: am|'m) a bot\b|this action was performed", re.I)
+_BOT_FOOTER = re.compile(r"\bI(?: am|'m) a bot\b", re.IGNORECASE)  # "I am a bot, and this action was performed automatically."
+_BOT_WORDING = re.compile(r"\bautomatically\b|\bI(?: am|'m) a bot\b|this action was performed", re.IGNORECASE)
 
 
 DEFAULT_MAX_BODY_CHARS = 4000
 DEFAULT_MAX_COMMENT_CHARS = 2000
 SNIPPET_CHARS = 160
-_HEADER_MARKS = re.compile(r"^\s{0,3}#{1,6}\s+", re.M)
+_HEADER_MARKS = re.compile(r"^\s{0,3}#{1,6}\s+", re.MULTILINE)
 
 
 @dataclass(frozen=True)

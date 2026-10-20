@@ -143,7 +143,7 @@ def test_search_with_subreddit_uses_arctic_query_search(fake_http, fixtures):
     fake_http["posts/search"] = fixtures("reddit_search.json")
     result = reddit.search("earbuds", "r/headphones", 5)
     hits = result.hits
-    url, params = fake_http.calls[0]
+    _url, params = fake_http.calls[0]
     assert params["subreddit"] == "headphones" and params["query"] == "earbuds" and "title" not in params
     assert result.via == "arctic-shift (r/headphones, fresh)"
     assert len(hits) == 3 and hits[0].url.startswith("https://www.reddit.com/r/")

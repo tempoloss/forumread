@@ -17,8 +17,11 @@ def to_int(value: Any) -> int | None:
 
 
 STOPWORDS = frozenset(
-    "a an and any anyone are as at be best better by can do does for from get good how i in is it its my of on or "
-    "review reviews should the this to versus vs what which with worth".split()
+    [
+        "a", "an", "and", "any", "anyone", "are", "as", "at", "be", "best", "better", "by", "can", "do", "does",
+        "for", "from", "get", "good", "how", "i", "in", "is", "it", "its", "my", "of", "on", "or", "review",
+        "reviews", "should", "the", "this", "to", "versus", "vs", "what", "which", "with", "worth",
+    ]
 )
 _WORD = re.compile(r"\w+")
 
