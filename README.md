@@ -93,24 +93,26 @@ Batch, cache, limits:
 - Cache: a sqlite file (`$FORUMREAD_CACHE`, else `%LOCALAPPDATA%\forumread\cache.db` / `~/.cache/forumread/cache.db`), 6 h for threads, 1 h for searches; error and empty responses are never stored; `--no-cache` skips it. WAL mode, safe for concurrent processes.
 - Per-host concurrency limits: Arctic Shift 4, pullpush 1 (>=1 s spacing), HN 8, Stack Exchange 4, DuckDuckGo 1 (2 s spacing), oauth.reddit.com 4. 429/5xx are retried with backoff, except live Reddit (the archives are its retry).
 - `--deadline S` bounds a whole call: unfinished items print as `**Timed out:** <url or query>` (JSON: an `error` entry) and the finished ones are shown as usual.
-- Shared state (guest token, quota counters, cooldowns) lives in a `state` table of the same sqlite file and is independent of `--no-cache`.
+- Shared state (guest tokens, quota counters, cooldowns) lives in a `state` table of the same sqlite file and is independent of `--no-cache`.
 
 ## Sources and limits
 
 | Source | Backend | Notes |
 | --- | --- | --- |
-| Reddit | live: anonymous guest token (`oauth.reddit.com`); fallback: [Arctic Shift](https://arctic-shift.photon-reddit.com) archive, then [pullpush](https://pullpush.io) | Live is primary: real scores and comment counts, Reddit's own relevance search (global or `--subreddit`). The quota is 100 requests per 10-minute window per token, i.e. per machine; it is shared by every process via the cache DB. A search costs 1 request, a thread 1–4. When the quota is used up or live access fails, calls fall back to the archives and the `_via` line says so (archive scores are snapshots; pullpush lags about a week). |
+| Reddit | live: anonymous guest tokens (`oauth.reddit.com`); fallback: [Arctic Shift](https://arctic-shift.photon-reddit.com) archive, then [pullpush](https://pullpush.io) | Live is primary: real scores and comment counts, Reddit's own relevance search (global or `--subreddit`). The quota is 100 requests per 10-minute window per token; forumread keeps a pool of up to `FORUMREAD_REDDIT_TOKENS` tokens (default 10, minted lazily only when needed), so ~1000 requests per 10 minutes per machine, shared by every process via the cache DB. A search costs 1 request, a thread 1–4. When the quota is used up or live access fails, calls fall back to the archives and the `_via` line says so (archive scores are snapshots; pullpush lags about a week). |
 | Hacker News | Algolia API (bodies, tree) + official Firebase API (ranking) | Comments carry no points; top-level comments follow the site's ranking. Search requires every word first and only then loosens (`loose match` in the `_via` line). Crossposts are collapsed. |
 | Stack Exchange | public API | Question + answers (accepted answer marked), no comment threads. Without a key the quota is 300 requests/day per IP, shared by every machine behind it; set `STACKEXCHANGE_KEY` to a free [stackapps.com](https://stackapps.com/apps/oauth/register) app key (not a secret) for 10,000/day. |
 | web | DuckDuckGo HTML, one query per domain | Optional. If DuckDuckGo serves a bot challenge (it does from some networks), it is skipped for 15 minutes and `web` uses live Reddit + Hacker News + Stack Overflow API search instead; the `_via` line says so. |
 
-Several machines behind one IP: each machine has its own cache, guest token and Reddit quota; Stack Exchange's daily quota, the archives' rate limits and DuckDuckGo's bot check are per IP and shared.
+Several machines behind one IP: each machine has its own cache, guest tokens and Reddit quota, but Reddit sees them all from the same address; Stack Exchange's daily quota, the archives' rate limits and DuckDuckGo's bot check are per IP and shared.
 
 ## How Reddit access works / caveats
 
 Live Reddit access uses an anonymous token issued to the public client id of Reddit's Android app — the same approach as [redlib](https://github.com/redlib-org/redlib). forumread is not affiliated with or endorsed by Reddit, and this may conflict with Reddit's terms of service. It is meant for personal research at human-like volume: respect the rate limits and don't hammer it.
 
 If Reddit changes or revokes the client id, set `FORUMREAD_REDDIT_CLIENT_ID` (and optionally `FORUMREAD_REDDIT_USER_AGENT`) to a working one. When live access fails for any reason, everything falls back to public archives; thanks to [Arctic Shift](https://arctic-shift.photon-reddit.com) and [pullpush](https://pullpush.io) for running them.
+
+**Token pool.** Reddit meters each guest token separately (100 requests per 10-minute window, aligned to the clock), so forumread keeps a pool of up to `FORUMREAD_REDDIT_TOKENS` tokens (default 10, minimum 1) in the shared state: ~1000 requests per 10 minutes per machine. Tokens are minted lazily, one at a time and at most one per 2 seconds, only when every existing token is used up; a light user never holds more than one. Requests go to the token with the most quota left; a 401 drops just that token, a 429 marks it used up until its reset and the request is retried on another one. Many guest tokens from one IP can look like abuse to Reddit, and an IP shared by a team is limited together: lower `FORUMREAD_REDDIT_TOKENS` (down to `1`) if you see 429s or 403s.
 
 ## Development
 

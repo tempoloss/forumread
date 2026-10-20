@@ -96,7 +96,7 @@ export default function forumread(pi: ExtensionAPI) {
       "Pass ALL your queries in one call (3-6 phrasings, up to 10, run concurrently) and then open the best 4-8 threads (many comments, recent for fast-moving topics) with forum_read. " +
       "Write keyword queries, not questions: exact product/model names plus 1-2 topic words ('airpods pro 3 anc'); Reddit search is keyword matching, so sentences and filler pull unrelated posts. " +
       "source=web (default) searches Reddit + HN + Stack Overflow together; source=reddit searches Reddit live (global, or inside one subreddit) with real scores and comment counts " +
-      "(guest OAuth, 100 requests per 10-minute window per machine; if that is unavailable the _via line says the archives Arctic Shift / pullpush served it, with stale scores and up to a week of lag); source=hn; source=se with a Stack Exchange site. " +
+      "(guest OAuth, ~1000 requests per 10-minute window per machine (token pool); if that is unavailable the _via line says the archives Arctic Shift / pullpush served it, with stale scores and up to a week of lag); source=hn; source=se with a Stack Exchange site. " +
       "A query with no hits yields '_No results._' (not an error): rephrase it; a '_No strong match..._' note means the archive returned only weak matches. Results are cached for 1 hour. Queries still unfinished after 100 s print as '**Timed out:** <query>'.",
     parameters: z.object({
       queries: z.array(z.string()).min(1).max(10).describe("Search queries; batch every query you want in one call"),

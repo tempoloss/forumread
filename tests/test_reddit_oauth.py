@@ -37,31 +37,39 @@ def more(ids, count=None, parent="t3_abc"):
 
 
 class FakeReddit:
-    """Stands in for reddit_oauth._send: a token endpoint, routed GETs, and Reddit's quota headers."""
+    """Stands in for reddit_oauth._send: a token endpoint, routed GETs, and Reddit's quota headers (one counter per token)."""
 
     def __init__(self, monkeypatch):
         self.token_requests = []
+        self.token_times = []
         self.gets = []  # (url, headers)
         self.routes = {}  # url substring -> payload, or callable(url) -> payload
         self.token_status = 200
         self.unauthorized = 0  # answer this many GETs with 401
-        self.remaining = 100
+        self.revoked = set()  # tokens answered with 401
+        self.limited = set()  # tokens answered with 429 and no quota headers
+        self.window = 100  # quota a token starts with
+        self.remaining = {}  # token -> requests left
         self._tokens = itertools.count(1)
         monkeypatch.setattr(reddit_oauth, "_send", self.send)
 
     def send(self, method, url, headers, body=None):
         if method == "POST":
             self.token_requests.append((headers, body))
+            self.token_times.append(state.now())
             if self.token_status != 200:
                 return self.token_status, {}, b"{}"
             n = next(self._tokens)
             return 200, {"x-reddit-loid": f"loid{n}"}, json.dumps({"access_token": f"tok{n}", "expires_in": 86399}).encode()
         self.gets.append((url, headers))
-        if self.unauthorized > 0:
-            self.unauthorized -= 1
+        token = headers["Authorization"].removeprefix("Bearer ")
+        if self.unauthorized > 0 or token in self.revoked:
+            self.unauthorized = max(self.unauthorized - 1, 0)
             return 401, {}, b"{}"
-        self.remaining -= 1
-        quota = {"x-ratelimit-remaining": str(float(self.remaining)), "x-ratelimit-reset": "300"}
+        if token in self.limited:
+            return 429, {}, b"{}"
+        self.remaining[token] = self.remaining.get(token, self.window) - 1
+        quota = {"x-ratelimit-remaining": str(float(self.remaining[token])), "x-ratelimit-reset": "300"}
         for needle, payload in self.routes.items():
             if needle in url:
                 result = payload(url) if callable(payload) else payload
@@ -78,6 +86,34 @@ def live(monkeypatch):
 
 def search_payload(*posts):
     return listing(list(posts))
+
+
+class Clock:
+    """Fake wall clock for the shared state; time.sleep advances it instead of waiting."""
+
+    def __init__(self):
+        self.now = 1000.0
+        self.sleeps = []
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.now += seconds
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    fake = Clock()
+    monkeypatch.setattr(state, "_clock", lambda: fake.now)
+    monkeypatch.setattr(time, "sleep", fake.sleep)
+    return fake
+
+
+def seed(slot, token, remaining=None, reset_at=None):
+    """Put a token (and optionally its quota row) into the pool as if an earlier process had stored it."""
+    shared = state.shared()
+    shared.set_json(reddit_oauth.token_key(slot), {"token": token, "loid": ""}, 3600)
+    if remaining is not None:
+        shared.set_json(reddit_oauth.rate_key(slot), {"remaining": remaining, "reset_at": reset_at}, max(reset_at - state.now(), 1))
 
 
 # --- token and quota -------------------------------------------------------------------------------------------
@@ -132,7 +168,7 @@ def test_token_expires_margin_before_the_server_says(live, monkeypatch):
     assert len(live.token_requests) == 2
 
 
-def test_401_refetches_the_token_once_and_retries(live):
+def test_401_refetches_the_token_once_and_retries(live, clock):
     live.routes["/search"] = search_payload(t3("a1"))
     reddit_oauth.search("warm", None, 1)
     live.unauthorized = 1
@@ -143,7 +179,7 @@ def test_401_refetches_the_token_once_and_retries(live):
     assert [h["Authorization"] for _, h in live.gets][-2:] == ["Bearer tok1", "Bearer tok2"]
 
 
-def test_persistent_401_gives_up_and_starts_a_cooldown(live):
+def test_persistent_401_gives_up_and_starts_a_cooldown(live, clock):
     live.routes["/search"] = search_payload(t3("a1"))
     live.unauthorized = 99
     with pytest.raises(FetchError, match="HTTP 401"):
@@ -152,7 +188,7 @@ def test_persistent_401_gives_up_and_starts_a_cooldown(live):
 
     state.reset()
     with pytest.raises(FetchError, match="cooling down"):
-        reddit_oauth.search("q", None, 1)  # needs a new token (the stale one is refused) -> cooldown, no request
+        reddit_oauth.search("q", None, 1)  # the refused token is gone and minting is cooling down: no request
     assert len(live.token_requests) == 2 and len(live.gets) == 2
 
 
@@ -166,48 +202,147 @@ def test_failed_token_fetch_cools_down_for_every_process(live):
     assert len(live.token_requests) == 1
 
 
-def test_quota_headers_are_stored_for_other_processes(live):
+def test_quota_headers_are_stored_per_token_for_other_processes(live):
     live.routes["/search"] = search_payload(t3("a1"))
     reddit_oauth.search("q", None, 1)
     state.reset()
-    rate = state.shared().get_json(reddit_oauth.RATE_KEY)
+    rate = state.shared().get_json(reddit_oauth.rate_key(0))
     assert rate["remaining"] == 99.0
     assert rate["reset_at"] == pytest.approx(state.now() + 300, abs=5)
 
 
-def test_low_quota_waits_for_a_close_reset(live, monkeypatch):
-    now = [1000.0]
-    monkeypatch.setattr(state, "_clock", lambda: now[0])
-    sleeps = []
-    monkeypatch.setattr(time, "sleep", sleeps.append)
+def test_low_quota_waits_for_a_close_reset(live, clock, monkeypatch):
+    monkeypatch.setenv("FORUMREAD_REDDIT_TOKENS", "1")
     live.routes["/search"] = search_payload(t3("a1"))
-    state.shared().set_json(reddit_oauth.RATE_KEY, {"remaining": 2, "reset_at": 1004.0}, 4)
+    seed(0, "seeded", remaining=2, reset_at=1004.0)
 
     assert len(reddit_oauth.search("q", None, 1)) == 1
-    assert sleeps == [4.0] and len(live.gets) == 1
+    assert clock.sleeps == [4.0] and len(live.gets) == 1 and live.token_requests == []
 
 
-def test_low_quota_with_a_far_reset_raises_rate_limited_before_any_request(live, monkeypatch):
-    now = [1000.0]
-    monkeypatch.setattr(state, "_clock", lambda: now[0])
-    state.shared().set_json(reddit_oauth.RATE_KEY, {"remaining": 1, "reset_at": 1030.0}, 30)
+def test_low_quota_with_a_far_reset_raises_rate_limited_before_any_request(live, clock, monkeypatch):
+    monkeypatch.setenv("FORUMREAD_REDDIT_TOKENS", "1")
+    seed(0, "seeded", remaining=1, reset_at=1030.0)
 
     with pytest.raises(reddit_oauth.RateLimited):
         reddit_oauth.search("q", None, 1)
     assert live.gets == []
 
-    now[0] = 1031.0  # the window reset: requests flow again
+    clock.now = 1031.0  # the window reset: requests flow again
     live.routes["/search"] = search_payload(t3("a1"))
     assert len(reddit_oauth.search("q", None, 1)) == 1
 
 
-def test_http_429_blocks_the_gate_and_raises(live):
+def test_http_429_blocks_the_gate_and_raises(live, clock, monkeypatch):
+    monkeypatch.setenv("FORUMREAD_REDDIT_TOKENS", "1")
     live.routes["/search"] = 429
     with pytest.raises(reddit_oauth.RateLimited):
         reddit_oauth.search("q", None, 1)
     with pytest.raises(reddit_oauth.RateLimited):
         reddit_oauth.search("q", None, 1)
     assert len(live.gets) == 1  # the second call saw the stored 429 and never went out
+
+
+# --- token pool ------------------------------------------------------------------------------------------------
+
+
+def test_second_token_is_minted_only_after_the_first_is_used_up(live, clock):
+    live.window = 4  # a token is used up at 2 left: two requests
+    live.routes["/search"] = search_payload(t3("a1"))
+    reddit_oauth.search("one", None, 1)
+    reddit_oauth.search("two", None, 1)
+    assert len(live.token_requests) == 1
+
+    reddit_oauth.search("three", None, 1)
+    reddit_oauth.search("four", None, 1)
+    assert len(live.token_requests) == 2
+    assert [h["Authorization"] for _, h in live.gets] == ["Bearer tok1", "Bearer tok1", "Bearer tok2", "Bearer tok2"]
+
+
+def test_slots_persist_across_processes(live, clock):
+    live.window = 4
+    live.routes["/search"] = search_payload(t3("a1"))
+    for query in ("one", "two", "three"):
+        reddit_oauth.search(query, None, 1)
+    state.reset()  # a new process
+    reddit_oauth.search("four", None, 1)
+
+    assert len(live.token_requests) == 2
+    assert [h["Authorization"] for _, h in live.gets][-2:] == ["Bearer tok2", "Bearer tok2"]
+    assert state.shared().get_json(reddit_oauth.token_key(1))["token"] == "tok2"
+
+
+def test_the_token_with_the_most_quota_is_used(live, clock):
+    live.routes["/search"] = search_payload(t3("a1"))
+    seed(0, "low", remaining=10, reset_at=1300.0)
+    seed(1, "high", remaining=60, reset_at=1300.0)
+    seed(2, "mid", remaining=30, reset_at=1300.0)
+    reddit_oauth.search("q", None, 1)
+
+    assert [h["Authorization"] for _, h in live.gets] == ["Bearer high"] and live.token_requests == []
+
+
+def test_pool_size_caps_the_tokens(live, clock, monkeypatch):
+    monkeypatch.setenv("FORUMREAD_REDDIT_TOKENS", "2")
+    live.window = 3  # used up after one request
+    live.routes["/search"] = search_payload(t3("a1"))
+    reddit_oauth.search("one", None, 1)
+    reddit_oauth.search("two", None, 1)
+    with pytest.raises(reddit_oauth.RateLimited):
+        reddit_oauth.search("three", None, 1)
+
+    assert len(live.token_requests) == 2 and len(live.gets) == 2
+
+
+def test_http_429_on_one_token_retries_on_another(live, clock):
+    live.routes["/search"] = search_payload(t3("a1"))
+    seed(0, "ok", remaining=50, reset_at=1300.0)
+    seed(1, "blocked", remaining=60, reset_at=1300.0)
+    live.limited.add("blocked")
+
+    assert len(reddit_oauth.search("q", None, 1)) == 1
+    assert [h["Authorization"] for _, h in live.gets] == ["Bearer blocked", "Bearer ok"]
+    rate = state.shared().get_json(reddit_oauth.rate_key(1))
+    assert rate["remaining"] == 0 and rate["reset_at"] == 1200.0  # end of the 10-minute window
+
+    reddit_oauth.search("again", None, 1)
+    assert [h["Authorization"] for _, h in live.gets][-1] == "Bearer ok" and len(live.gets) == 3
+    assert live.token_requests == []
+
+
+def test_http_429_with_no_other_token_raises(live, clock):
+    live.routes["/search"] = search_payload(t3("a1"))
+    seed(0, "blocked", remaining=60, reset_at=1300.0)
+    live.limited.add("blocked")
+    with pytest.raises(reddit_oauth.RateLimited):
+        reddit_oauth.search("q", None, 1)
+    assert len(live.gets) == 1 and live.token_requests == []
+
+
+def test_401_drops_only_that_slot(live, clock):
+    live.routes["/search"] = search_payload(t3("a1"))
+    seed(0, "ok", remaining=50, reset_at=1300.0)
+    seed(1, "revoked", remaining=60, reset_at=1300.0)
+    live.revoked.add("revoked")
+
+    assert len(reddit_oauth.search("q", None, 1)) == 1
+    assert [h["Authorization"] for _, h in live.gets] == ["Bearer revoked", "Bearer ok"]
+    shared = state.shared()
+    assert shared.get_json(reddit_oauth.token_key(1)) is None and shared.get_json(reddit_oauth.rate_key(1)) is None
+    assert shared.get_json(reddit_oauth.token_key(0))["token"] == "ok"
+    assert live.token_requests == [] and shared.get(reddit_oauth.DOWN_KEY) is None
+
+
+def test_tokens_are_minted_at_most_once_per_spacing_interval(live, clock):
+    live.window = 3  # used up after one request
+    live.routes["/search"] = search_payload(t3("a1"))
+    reddit_oauth.search("one", None, 1)
+    state.reset()  # the spacing is shared state, not process memory
+    reddit_oauth.search("two", None, 1)  # needs a second token right away: waits out the spacing
+
+    assert clock.sleeps == [reddit_oauth.MINT_SPACING]
+    first, second = live.token_times
+    assert second - first >= reddit_oauth.MINT_SPACING
 
 
 def test_responses_are_cached_when_a_cache_is_installed(live, tmp_path):
@@ -412,6 +547,16 @@ def test_state_values_expire_and_are_shared_between_instances(tmp_path, monkeypa
     assert second.get("k") == "v"
     now[0] += 11
     assert second.get("k") is None and first.get("k") is None
+
+
+def test_state_add_is_a_try_lock_shared_between_instances(tmp_path, monkeypatch):
+    now = [1000.0]
+    monkeypatch.setattr(state, "_clock", lambda: now[0])
+    first, second = state.State(tmp_path / "s.db"), state.State(tmp_path / "s.db")
+    assert first.add("lock", "a", 10) is True
+    assert second.add("lock", "b", 10) is False and second.get("lock") == "a"
+    now[0] += 10  # expired: free again
+    assert second.add("lock", "b", 10) is True and first.get("lock") == "b"
 
 
 def test_arctic_cooldown_is_visible_to_a_fresh_process(fake_http, fixtures):

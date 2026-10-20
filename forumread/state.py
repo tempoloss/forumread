@@ -1,6 +1,6 @@
 """Small key/value store with expiry, shared by every forumread process through the cache sqlite file.
 
-Holds what must outlive one process: the Reddit guest token, its rate-limit counters and "backend X is down" cooldowns.
+Holds what must outlive one process: the Reddit guest tokens, their rate-limit counters and "backend X is down" cooldowns.
 Independent of `--no-cache`. A broken database degrades to a per-process dict (the values then just are not shared).
 """
 
@@ -93,6 +93,30 @@ class State:
                 conn.close()
         except (sqlite3.Error, OSError) as exc:
             self._degrade(exc)
+
+    def add(self, key: str, value: str, ttl: float) -> bool:
+        """Store `value` only if `key` is absent or expired; True if this call stored it (a cross-process try-lock)."""
+        moment = now()
+        expires_at = moment + ttl
+        try:
+            conn = self._connect()
+            try:
+                with conn:
+                    cursor = conn.execute(
+                        "INSERT INTO state (key, value, expires_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE "
+                        "SET value = excluded.value, expires_at = excluded.expires_at WHERE state.expires_at <= ?",
+                        (key, value, expires_at, moment),
+                    )
+                    added = cursor.rowcount == 1
+            finally:
+                conn.close()
+        except (sqlite3.Error, OSError) as exc:
+            self._degrade(exc)
+            held = self._memory.get(key)
+            added = not (held and held[1] > moment)
+        if added:
+            self._memory[key] = (value, expires_at)
+        return added
 
     def get_json(self, key: str) -> Any:
         raw = self.get(key)
