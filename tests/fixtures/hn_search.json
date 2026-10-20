@@ -1,0 +1,18 @@
+{
+ "hits": [
+  {
+   "objectID": "22238335",
+   "title": "Why Discord is switching from Go to Rust",
+   "points": 1582,
+   "num_comments": 642,
+   "created_at_i": 1580837440
+  },
+  {
+   "objectID": "40172033",
+   "title": "Leaving Rust gamedev after 3 years",
+   "points": 1484,
+   "num_comments": 972,
+   "created_at_i": 1714152836
+  }
+ ]
+}

@@ -1,0 +1,24 @@
+{
+ "items": [
+  {
+   "title": "Count string elements on a map based on where strings are and fill grid with the counts",
+   "link": "https://stackoverflow.com/questions/54013442/count-string-elements-on-a-map-based-on-where-strings-are-and-fill-grid-with-the",
+   "score": 1,
+   "answer_count": 1,
+   "creation_date": 1546464844,
+   "owner": {
+    "display_name": "DataBach"
+   }
+  },
+  {
+   "title": "How do I make a flat list out of a list of lists?",
+   "link": "https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists",
+   "score": 5520,
+   "answer_count": 32,
+   "creation_date": 1244147405,
+   "owner": {
+    "display_name": "Emma"
+   }
+  }
+ ]
+}

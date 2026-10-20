@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "forumread"
+version = "0.1.0"
+description = "Forum opinion for AI agents: read Reddit, Hacker News and Stack Exchange threads as compact markdown"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "tempoloss"}]
+keywords = ["reddit", "hacker-news", "stackexchange", "forum", "ai-agents", "llm", "cli", "markdown"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Internet",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+forumread = "forumread.__main__:main"
+
+[tool.setuptools]
+packages = ["forumread", "forumread.sources"]
+
+[project.urls]
+Homepage = "https://github.com/tempoloss/forumread"
+Issues = "https://github.com/tempoloss/forumread/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

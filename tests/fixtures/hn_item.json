@@ -1,0 +1,163 @@
+{
+ "id": 8863,
+ "author": "dhouston",
+ "text": null,
+ "points": 104,
+ "created_at_i": 1175714200,
+ "type": "story",
+ "story_id": 8863,
+ "title": "My YC app: Dropbox - Throw away your USB drive",
+ "url": "http://www.getdropbox.com/u/2/screencast.html",
+ "children": [
+  {
+   "id": 8865,
+   "author": "dhouston",
+   "text": "oh, and a mac port is coming :)",
+   "points": null,
+   "created_at_i": 1175714575,
+   "type": "comment",
+   "story_id": 8863,
+   "title": null,
+   "url": null,
+   "children": [
+    {
+     "id": 9007,
+     "author": "vlad",
+     "text": "Drew, this is awesome!  All of the features you mentioned are exactly what people need.",
+     "points": null,
+     "created_at_i": 1175737691,
+     "type": "comment",
+     "story_id": 8863,
+     "title": null,
+     "url": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": 8869,
+   "author": "zaidf",
+   "text": "This has great potential!<p>Only suggestion I would have is go slower on the demo. I know you lost me very early into it switching between windows.<p>If you are looking for a wider audience than those who already know the context of dropbox, make a video where you lay out the case for use of dropbox using simple examples from user point of view(think a college student) and then in the demo show just the basic features. I got the feeling you tried to show too many features too quickly.<p>In general, I have realized it is much better to launch with something that does a few things REALLY well rather than a lot of things with little focus. When you launch with whole lot of features people assume you are competing with the big companies. When you launch small and do it well, it is easier to attract a user-base and THEN keep feeding it more advance features in form of updates.<p>Good luck! Looks slick from the UI.\n",
+   "points": null,
+   "created_at_i": 1175715380,
+   "type": "comment",
+   "story_id": 8863,
+   "title": null,
+   "url": null,
+   "children": [
+    {
+     "id": 8949,
+     "author": "rwalker",
+     "text": "Looks like a great product, and I will second the parent comment.<p>One thing they teach at YC, and in one of pg's essays (<a href=\"http://www.paulgraham.com/investors.html),\">http://www.paulgraham.com/investors.html),</a> is to present a story instead of a list of features.  That way you answer the question of \"Why would I use this product?\" simultaneously to answering \"What does this product do?\".",
+     "points": null,
+     "created_at_i": 1175727038,
+     "type": "comment",
+     "story_id": 8863,
+     "title": null,
+     "url": null,
+     "children": [
+      {
+       "id": 8960,
+       "author": "zach",
+       "text": "I love that approach (my weblog is called \"Story-Driven\" after all) because it automatically breaks technical people out of a taxonomic, procedural mindset.  So many descriptions of things are on the order of \"well, it's a set of pliers with a light on it\" instead of \"it's how I change fuses in my rusty fusebox in the middle of the night.\"<p>You can't emphasize enough to people to tell a story, and the screencast is a great crucible for whether you have a good story to tell.  Screencasts aren't appreciated enough for the way they've helped people understand concepts that are a little more technical than they normally would sit still for.",
+       "points": null,
+       "created_at_i": 1175728667,
+       "type": "comment",
+       "story_id": 8863,
+       "title": null,
+       "url": null,
+       "children": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 8870,
+   "author": "Readmore",
+   "text": "That's hot!",
+   "points": null,
+   "created_at_i": 1175715485,
+   "type": "comment",
+   "story_id": 8863,
+   "title": null,
+   "url": null,
+   "children": []
+  },
+  {
+   "id": 8872,
+   "author": "tyohn",
+   "text": "I like the app; but instead of telling people to throw away their USB drive maybe you could incorporate a sync feature that would allow users to work on their files offline.  Sometimes you just dont have internet access.  Just a thought.  ",
+   "points": null,
+   "created_at_i": 1175715776,
+   "type": "comment",
+   "story_id": 8863,
+   "title": null,
+   "url": null,
+   "children": [
+    {
+     "id": 8874,
+     "author": "dhouston",
+     "text": "yup -- i didn't get to mention it, but a big piece of dropbox is that it's a local/\"normal\" folder that's synced in the background -- you can work on your files offline (that, among other things, drove me nuts about typical online drives) and get local IO speeds (good for photoshop, film, etc.)",
+     "points": null,
+     "created_at_i": 1175715945,
+     "type": "comment",
+     "story_id": 8863,
+     "title": null,
+     "url": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "id": 8873,
+   "author": "mukund",
+   "text": "Cool stuff indeed. I would give 5 stars for such an useful application. I dont know if users can have administrative rights installing this features on some random computers, cant u incorporate something like web based interface?\n",
+   "points": null,
+   "created_at_i": 1175715923,
+   "type": "comment",
+   "story_id": 8863,
+   "title": null,
+   "url": null,
+   "children": [
+    {
+     "id": 8875,
+     "author": "dhouston",
+     "text": "it should degrade gracefully and work without admin rights; in addition you can download (and soon, upload) via the web interface if you're not at one of your computers.",
+     "points": null,
+     "created_at_i": 1175716216,
+     "type": "comment",
+     "story_id": 8863,
+     "title": null,
+     "url": null,
+     "children": [
+      {
+       "id": 8877,
+       "author": "mukund",
+       "text": "Then u would win this YC for sure as i can see potential in this. Good luck mate :)",
+       "points": null,
+       "created_at_i": 1175716330,
+       "type": "comment",
+       "story_id": 8863,
+       "title": null,
+       "url": null,
+       "children": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 8878,
+   "author": "nostrademons",
+   "text": "I'm impressed.",
+   "points": null,
+   "created_at_i": 1175716633,
+   "type": "comment",
+   "story_id": 8863,
+   "title": null,
+   "url": null,
+   "children": []
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+{
+ "items": [
+  {
+   "question_id": 1711631,
+   "title": "Improve INSERT-per-second performance of SQLite",
+   "body": "<p>Optimizing SQLite is tricky. Bulk-insert performance of a C application can vary from 85 inserts per second to over 96,000 inserts per second!</p>\n<p><strong>Background:</strong> We are using SQLite as part of a desktop application. We have large amounts of configuration data stored in XML files that are parsed and loaded into an SQLite database for further processing when the application is initialized. SQLite is ideal for this situation because it's fast, it requires no specialized configuration, and the database is stored on disk as a single file.</p>\n<p><strong>Rationale:</strong> <em>Initially I was disappointed with the performance I was seeing.</em> It turns out that the performance of SQLite can vary significantly (both for bulk-inserts and selects) depending on how the database is configured and how you're using the API. It was not a trivial matter to figure out what all of the options and techniques were, so I thought it was prudent to create this community wiki entry to share the results with Stack Overflow readers in order to save others the trouble of the same investigations.</p>\n<p><strong>The experiment:</strong> Rather than simply talking about performance tips in the general sense (i.e. <em>&quot;Use a transaction!&quot;</em>), I thought it was best to write some C code and <em>actually measure</em> the impact of various options. We're going to start with some simple data:</p>\n<ul>\n<li>A 28 MiB <a href=\"https://en.wikipedia.org/wiki/.tsv\" rel=\"noreferrer\">",
+   "score": 3424,
+   "creation_date": 1257891403,
+   "link": "https://stackoverflow.com/questions/1711631/improve-insert-per-second-performance-of-sqlite",
+   "owner": {
+    "display_name": "Mike Willekes"
+   }
+  }
+ ]
+}
